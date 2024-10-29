@@ -3,7 +3,8 @@
     "source": "dataconnect"
   },
   "hosting": {
-    "public": "dist",
+    "site": "fifa11-tournament",
+    "public": "public",
     "ignore": [
       "firebase.json",
       "**/.*",
