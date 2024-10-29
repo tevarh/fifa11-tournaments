@@ -7,14 +7,14 @@ import { getAnalytics } from "firebase/analytics";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBglUq-vOKnWTwEy2haspALfcsAq8w2gJ4",
-  authDomain: "fifa11-tournaments-f468e.firebaseapp.com",
-  projectId: "fifa11-tournaments-f468e",
-  storageBucket: "fifa11-tournaments-f468e.appspot.com",
-  messagingSenderId: "1012071313787",
-  appId: "1:1012071313787:web:2c6930dd714ed171b34dde",
-  measurementId: "G-RHK9YJ40SK"
+  apiKey: process.env.VUE_APP_FIREBASE_API_KEY,
+  authDomain: process.env.VUE_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VUE_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.VUE_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VUE_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.VUE_APP_FIREBASE_APP_ID
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

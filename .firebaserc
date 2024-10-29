@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "fifa11-53d18"
-  }
+  },
+  "targets": {
+    "fifa11-53d18": {
+      "hosting": {
+        "fifa11-tournament": [
+          "fifa11-53d18"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
