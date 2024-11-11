@@ -173,3 +173,51 @@ body {
     background-color: rgba(255, 255, 255, 0.1); /* Slight transparency for readability */
     color: white;
   }
+
+  /* Admin badge styling */
+.admin-badge {
+  color: #FFD700; /* Gold color */
+  font-weight: bold;
+  margin-right: 12px; /* Increase right margin to create more space */
+  padding: 2px 6px;
+  border: 1px solid #FFD700;
+  border-radius: 3px;
+}
+
+.language-selector {
+  margin-right: 12px;
+}
+
+/* Table styling */
+
+
+/* Register link styling */
+.register-link {
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+}
+.register-link:hover {
+  text-decoration: underline;
+}
+
+.tournaments-content {
+  color: white;
+  background-color: #1a1a1a; /* Dark background for the page */
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.register-button {
+  color: white;
+  font-weight: bold;
+  border-color: white;
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.register-button:hover {
+  color: #f8f9fa; /* Lighter color for hover effect */
+  border-color: #f8f9fa; /* Lighter border on hover */
+  background-color: transparent; /* No background change */
+  text-decoration: none; /* No underline on hover */
+}

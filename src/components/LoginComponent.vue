@@ -8,20 +8,26 @@
 <script>
 import { auth } from "../firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-const ADMIN_EMAIL = "tevarhbrraikk@google.com"; // Asenda oma admini e-posti aadressiga
+const ADMIN_EMAIL = "tevarhbrraikk@google.com"; // Replace with your admin email
 
 export default {
+  data() {
+    return {
+      user: null, // Store user data here
+    };
+  },
   methods: {
     async signInWithGoogle() {
       const provider = new GoogleAuthProvider();
       try {
         const result = await signInWithPopup(auth, provider);
-        console.log("User info:", result.user); // This retrieves the user's information
+        this.user = result.user;
         this.user.isAdmin = this.user.email === ADMIN_EMAIL;
+        console.log("User info:", this.user);
       } catch (error) {
         console.error("Sign-in error:", error);
       }
     }
   }
 };
-</script>
+

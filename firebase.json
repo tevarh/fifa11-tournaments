@@ -1,6 +1,5 @@
 {
   "hosting": {
-    "target": "fifa11-tournament",
     "public": "dist",
     "ignore": [
       "firebase.json",

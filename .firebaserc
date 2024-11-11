@@ -1,15 +1,8 @@
 {
   "projects": {
-    "default": "fifa11-53d18"
+    "default": "fifa11-league",
+    "main": "fifa11-league"
   },
-  "targets": {
-    "fifa11-53d18": {
-      "hosting": {
-        "fifa11-tournament": [
-          "fifa11-53d18"
-        ]
-      }
-    }
-  },
+  "targets": {},
   "etags": {}
 }

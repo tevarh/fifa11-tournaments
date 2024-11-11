@@ -1,10 +1,12 @@
 <!-- src/views/HomeComponent.vue -->
-<template>
-    <div class="tournaments-content">
-      <h1>Home Page</h1>
-      <p>Welcome to the homepage!</p>
-    </div>
-  </template>
+<template> 
+  <div class="tournaments-content">
+    <h1>{{ $t("welcomeMessage") }}</h1>
+    <p>{{ $t("discordInfo") }}</p>
+    <p>{{ $t("developmentInfo") }}</p>
+  </div>
+</template>
+
   
   <script>
   export default {

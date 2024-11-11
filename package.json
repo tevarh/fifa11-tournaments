@@ -5,13 +5,16 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "deploy": "npm run build && firebase deploy --only hosting"
   },
   "dependencies": {
     "@firebasegen/default-connector": "file:dataconnect-generated/js/default-connector",
+    "bootstrap": "^5.3.3",
     "core-js": "^3.8.3",
     "firebase": "^11.0.1",
     "vue": "^3.2.13",
+    "vue-i18n": "^10.0.4",
     "vue-router": "^4.4.5"
   },
   "devDependencies": {
