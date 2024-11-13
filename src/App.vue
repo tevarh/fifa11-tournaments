@@ -59,7 +59,14 @@
       <SidebarComponent :is-admin="isAdmin" />
       <main class="content">
         <router-view v-slot="{ Component }">
-          <component :isAdmin="isAdmin" :is="Component" />
+          <component 
+          :isAdmin="isAdmin" 
+          :is="Component" 
+          :user="user"
+          :username="username"
+          :gameRangerId="gameRangerId"
+          :discordUser="discordUser"
+          />
         </router-view>
       </main>
     </div>
@@ -103,32 +110,52 @@ export default {
   },
   methods: {
     async checkUserProfile() {
-      if (!this.user) return; // Do not proceed if user is not logged in
+        if (!this.user) return; // Ensure user is logged in
 
-      const userRef = doc(db, 'users', this.user.uid);
-      const userDoc = await getDoc(userRef);
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        this.username = data.username || '';
-        this.gameRangerId = data.gameRangerId || '';
-        this.discordUser = data.discordUser || '';
+        try {
+            const userRef = doc(db, 'users', this.user.uid);
+            const userDoc = await getDoc(userRef);
 
-        // Set cancelTrue based on existing data
-        if (this.username && this.gameRangerId && this.discordUser) {
-          this.cancelTrue = 'Y';
-        } else {
-          this.cancelTrue = 'N';
+            // Check if userDoc exists or needs to be loaded
+            if (userDoc.exists()) {
+                const data = userDoc.data();
+                this.username = data.username || '';
+                this.gameRangerId = data.gameRangerId || '';
+                this.discordUser = data.discordUser || '';
+
+                // Set cancelTrue based on existing data
+                if (!this.username || !this.gameRangerId || !this.discordUser) {
+                    this.cancelTrue = 'N';
+                    this.showInfoPopup = true; // Show popup if any field is missing
+                } else {
+                    this.cancelTrue = 'Y';
+                }
+            } else {
+                // Load user data if not found
+                await this.loadUserFromDB();
+            }
+        } catch (error) {
+            console.error('Error fetching user profile from Firestore:', error);
         }
+    },
+    async loadUserFromDB() {
+        try {
+            const userRef = doc(db, 'users', this.user.uid);
+            const userDoc = await getDoc(userRef);
 
-        // Show popup if any field is missing
-        if (!this.username || !this.gameRangerId || !this.discordUser) {
-          this.showInfoPopup = true;
+            if (userDoc.exists()) {
+                const data = userDoc.data();
+                this.username = data.username || '';
+                this.gameRangerId = data.gameRangerId || '';
+                this.discordUser = data.discordUser || '';
+                console.log('User data loaded from DB:', data);
+            } else {
+                console.log('No user document found in DB.');
+                this.showInfoPopup = true; // Prompt user to fill in their profile if no document exists
+            }
+        } catch (error) {
+            console.error('Error loading user data from Firestore:', error);
         }
-      } else {
-        // Show popup if no document exists and set cancelTrue to 'N'
-        this.cancelTrue = 'N';
-        this.showInfoPopup = true;
-      }
     },
     async saveUserDetails() {
       const userRef = doc(db, 'users', this.user.uid);

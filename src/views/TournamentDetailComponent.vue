@@ -1,10 +1,17 @@
 <template>
   <div>
+    <!-- Loading Spinner -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="spinner"></div>
+    </div>
+
     <h1>{{ tournament.name }}</h1>
     <p>Type: {{ tournament.type }}</p>
     <p>Status: {{ tournament.status || "Upcoming" }}</p>
     <p>Format: {{ tournament.teamSize === 1 ? "1v1" : "2v2" }}</p>
     <p>Players: {{ registrations.length }}/{{ tournament.maxPlayers }}</p>
+
+    <!-- Registration form -->
     <div v-if="user && !isTournamentFull && !isRegistered">
       <h3>Team Information</h3>
       <form @submit.prevent="registerForTournament">
@@ -33,36 +40,16 @@
       </form>
     </div>
 
+    <!-- Registered message and update/unregister options -->
     <div v-if="user && isRegistered">
-      <p>You are registered for this tournament.</p>
-      <h3>Update Team Information</h3>
-      <form @submit.prevent="updateRegistration">
-        <div class="form-group">
-          <label for="teamName">Team Name:</label>
-          <input
-            type="text"
-            v-model="teamName"
-            id="teamName"
-            required
-            class="form-control"
-          />
-        </div>
-        <div v-if="tournament.teamSize === 2" class="form-group">
-          <label for="teammateUsername">Teammate's Username:</label>
-          <input
-            type="text"
-            v-model="teammateUsername"
-            id="teammateUsername"
-            class="form-control"
-          />
-        </div>
-        <button type="submit" class="btn btn-success mt-3">Update Registration</button>
-      </form>
+      <div v-if="isCaptain">
+        <p><b>You are registered as Captain of the team!</b></p>
+      </div>
+      <div v-else>
+        <p><b>You are registered as teammate!</b></p>
+      </div>
       <button @click="unregisterFromTournament" class="btn btn-danger mt-3">Unregister</button>
-    </div>
-
-    <div v-if="!user">
-      <p>Please sign in to register for this tournament.</p>
+      <button @click="updateRegistration" class="btn btn-success mt-3" v-if="isCaptain">Update Registration</button>
     </div>
 
     <h2>Registered Players</h2>
@@ -70,7 +57,7 @@
       <thead>
         <tr>
           <th scope="col">#</th>
-          <th scope="col">Player Name</th>
+          <th scope="col">Captain</th>
           <th scope="col">Team Name</th>
           <th scope="col">Teammate</th>
           <th scope="col">Registration Time</th>
@@ -100,122 +87,175 @@
 
 <script>
 import { db } from '../firebase';
-import { doc, getDoc, collection, addDoc, getDocs, deleteDoc, updateDoc, query, where } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, getDocs, deleteDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 
 export default {
+  props: {
+    isAdmin: Boolean,
+    globalUser: Object,
+    username: String,
+    gameRangerId: String,
+    discordUser: String,
+  },
   data() {
     return {
+      loading: false,
       tournament: {},
       user: null,
       isRegistered: false,
+      isCaptain: false,
       registrations: [],
-      teamName: '', // Team name for registration
-      teammateUsername: '', // Teammate's username for 2v2 tournaments
-      registrationDocId: null // Stores the registration document ID
+      teamName: '',
+      teammateUsername: '',
+      registrationDocId: null,
     };
   },
-  async created() {
-    const tournamentID = this.$route.params.tournamentID;
-    
-    // Fetch tournament details
-    const docRef = doc(db, "tournaments", tournamentID);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      this.tournament = docSnap.data();
-    }
-    this.loadRegistrations();
-    // Check authentication status and registration
-    onAuthStateChanged(auth, (user) => {
-      this.user = user;
-      if (user) {
-        this.checkRegistration();
-      }
-    });
+  mounted() {
+    console.log('SHOW THIS TO CONSOLE!!!')
+    console.log('And username is $this.username' % this.username)
   },
-  computed: {
-    // Check if tournament is full
-    isTournamentFull() {
-      return this.registrations.length >= this.tournament.maxPlayers;
+  async created() {
+    this.loading = true;
+    try {
+      const tournamentID = this.$route.params.tournamentID;
+      const docRef = doc(db, "tournaments", tournamentID);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        this.tournament = docSnap.data();
+      }
+      await this.loadRegistrations();
+      onAuthStateChanged(auth, (user) => {
+        this.user = user;
+        if (user) {
+          this.checkRegistration();
+        }
+      });
+    } finally {
+      this.loading = false;
     }
   },
   methods: {
-    // Check if the user is already registered
     async checkRegistration() {
       if (this.user) {
-        const registrationRef = collection(db, "tournaments", this.$route.params.tournamentID, "registrations");
-        const registeredQuery = query(registrationRef, where("userId", "==", this.user.uid));
-        const registeredSnapshot = await getDocs(registeredQuery);
-  
-        if (!registeredSnapshot.empty) {
-          this.isRegistered = true;
-          const registration = registeredSnapshot.docs[0].data();
-          this.registrationDocId = registeredSnapshot.docs[0].id; // Store doc ID for unregistering
-          this.teamName = registration.teamName;
-          this.teammateUsername = registration.teammateUsername || '';
+        this.loading = true;
+        try {
+          const registrationRef = collection(db, "tournaments", this.$route.params.tournamentID, "registrations");
+          const snapshot = await getDocs(registrationRef);
+
+          this.isRegistered = false;
+          this.isCaptain = false;
+
+          snapshot.forEach((doc) => {
+            const registration = doc.data();
+            if (registration.playerName === this.username || registration.teammateUsername === this.username) {
+              this.isRegistered = true;
+              this.registrationDocId = doc.id;
+              this.teamName = registration.teamName || '';
+              this.teammateUsername = registration.teammateUsername || '';
+            }
+            if (registration.playerName === this.username) {
+              this.isCaptain = true;
+            }
+          });
+        } finally {
+          this.loading = false;
         }
       }
     },
-    // Register user for the tournament
     async registerForTournament() {
-      const registrationRef = collection(db, "tournaments", this.$route.params.tournamentID, "registrations");
-      await addDoc(registrationRef, {
-        userId: this.user.uid,
-        playerName: this.user.displayName,
-        teamName: this.teamName,
-        teammateUsername: this.teammateUsername,
-        registeredAt: new Date()
-      });
-      this.isRegistered = true;
-      alert("Registered successfully!");
-      this.loadRegistrations(); // Refresh registrations after registration
+      this.loading = true;
+      try {
+        const registrationRef = collection(db, "tournaments", this.$route.params.tournamentID, "registrations");
+        await addDoc(registrationRef, {
+          userId: this.user.uid,
+          playerName: this.username,
+          teamName: this.teamName,
+          teammateUsername: this.teammateUsername,
+          registeredAt: new Date()
+        });
+        this.isRegistered = true;
+        this.isCaptain = true;
+        alert("Registered successfully!");
+        // Reload registrations and refresh registration status
+        await this.loadRegistrations();
+        await this.checkRegistration();
+      } finally {
+        this.loading = false;
+      }
     },
-    // Assign user to an open spot in a team
     async assignToTeam(registrationId) {
-      const registrationDocRef = doc(db, "tournaments", this.$route.params.tournamentID, "registrations", registrationId);
-      await updateDoc(registrationDocRef, {
-        teammateUsername: this.user.displayName
-      });
-      alert("Assigned to team successfully!");
-      this.isRegistered = true;
-      this.loadRegistrations();
+      this.loading = true;
+      try {
+        const registrationDocRef = doc(db, "tournaments", this.$route.params.tournamentID, "registrations", registrationId);
+        await updateDoc(registrationDocRef, {
+          teammateUsername: this.username
+        });
+        alert("Assigned to team successfully!");
+        this.isRegistered = true;
+        await this.loadRegistrations();
+      } finally {
+        this.loading = false;
+      }
     },
-    // Update existing registration
     async updateRegistration() {
       if (this.registrationDocId) {
-        const registrationDocRef = doc(db, "tournaments", this.$route.params.tournamentID, "registrations", this.registrationDocId);
-        await updateDoc(registrationDocRef, {
-          teamName: this.teamName,
-          teammateUsername: this.teammateUsername
-        });
-        alert("Registration updated successfully!");
-        this.loadRegistrations();
+        this.loading = true;
+        try {
+          const registrationDocRef = doc(db, "tournaments", this.$route.params.tournamentID, "registrations", this.registrationDocId);
+          await updateDoc(registrationDocRef, {
+            teamName: this.teamName,
+            teammateUsername: this.teammateUsername
+          });
+          alert("Registration updated successfully!");
+          // Reload registrations and refresh registration status
+          await this.loadRegistrations();
+          await this.checkRegistration();
+        } finally {
+          this.loading = false;
+        }
       }
     },
-    // Unregister user from the tournament
     async unregisterFromTournament() {
       if (this.registrationDocId) {
-        const registrationDocRef = doc(db, "tournaments", this.$route.params.tournamentID, "registrations", this.registrationDocId);
-        await deleteDoc(registrationDocRef);
-        this.isRegistered = false;
-        this.registrationDocId = null;
-        alert("Unregistered successfully!");
-        this.loadRegistrations(); // Refresh registrations after unregistering
+        this.loading = true;
+        try {
+          const registrationDocRef = doc(db, "tournaments", this.$route.params.tournamentID, "registrations", this.registrationDocId);
+          if (this.isCaptain) {
+            await deleteDoc(registrationDocRef);
+            this.isRegistered = false;
+            this.registrationDocId = null;
+            this.isCaptain = false;
+            alert("Unregistered successfully as captain!");
+          } else {
+            await updateDoc(registrationDocRef, {
+              teammateUsername: null
+            });
+            this.isRegistered = false;
+            alert("Unregistered successfully as teammate!");
+          }
+          // Reload registrations and refresh registration status
+          await this.loadRegistrations();
+          await this.checkRegistration();
+        } finally {
+          this.loading = false;
+        }
       }
     },
-    // Load all registered players for the tournament
     async loadRegistrations() {
-      const registrationsRef = collection(db, "tournaments", this.$route.params.tournamentID, "registrations");
-      const registrationsSnap = await getDocs(registrationsRef);
-      this.registrations = registrationsSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      this.loading = true;
+      try {
+        const registrationsRef = collection(db, "tournaments", this.$route.params.tournamentID, "registrations");
+        const registrationsSnap = await getDocs(registrationsRef);
+        this.registrations = registrationsSnap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } finally {
+        this.loading = false;
+      }
     },
-   
-
-    // Format Firestore timestamp for display
     formatTimestamp(timestamp) {
       const date = timestamp.toDate();
       return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
@@ -225,6 +265,29 @@ export default {
 </script>
 
 <style scoped>
+/* Loading overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.spinner {
+  border: 8px solid rgba(255, 255, 255, 0.2);
+  border-top: 8px solid white;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 0.8s linear infinite;
+}
+
 .tournament-detail {
   color: white;
 }
